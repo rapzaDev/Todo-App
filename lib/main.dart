@@ -1,7 +1,7 @@
-// ignore_for_file: avoid_unnecessary_containers, must_be_immutable
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models/item.dart';
 
 void main() {
@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
       title: 'Todo App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.brown,
+        primarySwatch: Colors.purple,
       ),
       home: HomePage(),
     );
@@ -29,10 +29,10 @@ class HomePage extends StatefulWidget {
   var items = <Item>[];
 
   HomePage({Key? key}) : super(key: key) {
-    items = [];
-    items.add(Item(title: 'Item 1', done: false));
-    items.add(Item(title: 'Item 2', done: true));
-    items.add(Item(title: 'Item 3', done: false));
+    // items = [];
+    // items.add(Item(title: 'Item 1', done: false));
+    // items.add(Item(title: 'Item 2', done: true));
+    // items.add(Item(title: 'Item 3', done: false));
   }
 
   @override
@@ -54,17 +54,47 @@ class _HomePageState extends State<HomePage> {
 
       // limpando variavel
       newTaskCtrl.text = "";
+
+      save();
     });
   }
 
   void remove(int index) {
     setState(() {
       widget.items.removeAt(index);
+      save();
     });
+  }
+
+  Future load() async {
+    var prefs = await SharedPreferences.getInstance();
+    var data = prefs.getString('data');
+
+    // ignore: unnecessary_null_comparison
+    if (data != null) {
+      Iterable decoded = jsonDecode(data);
+      List<Item> result = decoded.map((x) => Item.fromJson(x)).toList();
+      setState(() {
+        widget.items = result;
+      });
+    }
+
+    return data;
+  }
+
+  save() async {
+    var prefs = await SharedPreferences.getInstance();
+    await prefs.setString('data', jsonEncode(widget.items));
+  }
+
+  _HomePageState() {
+    load();
   }
 
   @override
   Widget build(BuildContext context) {
+    // load();
+
     return Scaffold(
       appBar: AppBar(
         title: TextFormField(
@@ -88,27 +118,28 @@ class _HomePageState extends State<HomePage> {
 
           return Dismissible(
             key: Key(item.title),
+            background: Container(
+              color: Colors.green.withOpacity(0.5),
+            ),
+            onDismissed: (direction) {
+              remove(index);
+            },
             child: CheckboxListTile(
               title: Text(item.title),
               value: item.done,
               onChanged: (value) {
                 setState(() {
                   item.done = value!;
+                  save();
                 });
               },
             ),
-            background: Container(
-              color: Colors.amber.withOpacity(0.5),
-            ),
-            onDismissed: (direction) {
-              remove(index);
-            },
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: add,
-        backgroundColor: Colors.amber,
+        backgroundColor: Colors.green,
         child: const Icon(Icons.add),
       ),
     );
